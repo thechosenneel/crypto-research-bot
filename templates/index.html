@@ -1,206 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Crypto Bot</title>
+    <title>Smart Crypto Finder</title>
     <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #f2f2f2;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: row;
-            min-height: 100vh;
-        }
-
-        .left-panel {
-            flex: 3;
-            padding: 40px;
-        }
-
-        .right-panel {
-            flex: 1;
-            background-color: #1e1e1e;
-            color: #fff;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        h2, h3 {
-            margin-top: 0;
-        }
-
-        input, button {
-            padding: 10px;
-            font-size: 16px;
-            margin: 5px;
-        }
-
-        #suggestions {
-            background: white;
-            border: 1px solid #ccc;
-            width: 300px;
-            margin: 0 auto;
-            text-align: left;
-        }
-
-        #suggestions div {
-            padding: 8px;
-            cursor: pointer;
-        }
-
-        #suggestions div:hover {
-            background-color: #eee;
-        }
-
-        #output {
-            margin-top: 30px;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .chart {
-            margin-top: 20px;
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 10px;
-        }
-
-        .chart img {
-            border-radius: 10px;
-            width: 100%;
-        }
-
-        .coin-card {
-            margin-bottom: 15px;
-            border-bottom: 1px solid #444;
-            padding-bottom: 10px;
-        }
-
-        .coin-card img {
-            width: 20px;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-
-        .coin-card strong {
-            font-size: 16px;
-        }
-
-        @media screen and (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-
-            .left-panel, .right-panel {
-                flex: 1;
-                padding: 20px;
-            }
-        }
+        body { font-family: Arial; background: #111; color: #eee; }
+        .coin { border-bottom: 1px solid #333; padding: 10px; display: flex; align-items: center; }
+        img { width: 30px; height: 30px; margin-right: 10px; }
+        .info { margin-left: 10px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="left-panel">
-            <h2>Crypto Bot</h2>
-            <input type="text" id="coinInput" placeholder="Search coin..." oninput="suggestCoins()">
-            <button onclick="getCoinInfo()">Fetch Info</button>
-            <div id="suggestions"></div>
-
-            <div id="output"></div>
-        </div>
-
-        <div class="right-panel">
-            <h3>Top 10 Coins</h3>
-            <div id="top10"></div>
+    <h1>🧠 Smart Coin Sniffer</h1>
+    <p>Showing coins with strong potential based on volume, price, momentum, and market cap.</p>
+    {% for coin in coins %}
+    <div class="coin">
+        <img src="{{ coin.image }}" alt="{{ coin.name }}">
+        <div class="info">
+            <strong>{{ coin.name }} ({{ coin.symbol.upper() }})</strong><br>
+            💰 Price: ${{ coin.price }} | 📈 24h: {{ coin.change_24h }}% | 7d: {{ coin.change_7d }}%<br>
+            🧩 Volume: ${{ coin.volume }} | MC: ${{ coin.market_cap }}
         </div>
     </div>
-
-    <script>
-        let coinList = [];
-
-        async function loadCoins() {
-            const res = await fetch("https://api.coingecko.com/api/v3/coins/list");
-            coinList = await res.json();
-            getTop10(); // Load top coins on page load
-        }
-
-        function suggestCoins() {
-            const input = document.getElementById("coinInput").value.toLowerCase();
-            const suggestions = document.getElementById("suggestions");
-            suggestions.innerHTML = "";
-
-            if (input.length < 2) return;
-
-            const matches = coinList
-                .filter(c => c.id.startsWith(input))
-                .slice(0, 10);
-
-            matches.forEach(c => {
-                const div = document.createElement("div");
-                div.textContent = c.id;
-                div.onclick = () => {
-                    document.getElementById("coinInput").value = c.id;
-                    suggestions.innerHTML = "";
-                };
-                suggestions.appendChild(div);
-            });
-        }
-
-        async function getCoinInfo() {
-            const coin = document.getElementById('coinInput').value.toLowerCase();
-            const output = document.getElementById('output');
-            document.getElementById('suggestions').innerHTML = "";
-            output.innerHTML = "Loading...";
-
-            const response = await fetch('/coin_info', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ coin: coin })
-            });
-
-            const data = await response.json();
-
-            if (data.error) {
-                output.innerHTML = "<p>Coin not found!</p>";
-                return;
-            }
-
-            output.innerHTML = `
-                <img src="${data.image}" alt="${data.name}" />
-                <h3>${data.name}</h3>
-                <p><strong>Price:</strong> $${data.price}</p>
-                <p><strong>Market Cap:</strong> $${data.market_cap.toLocaleString()}</p>
-                <p><strong>24h Volume:</strong> $${data.volume.toLocaleString()}</p>
-                <p><strong>24h Change:</strong> ${data.change_24h.toFixed(2)}%</p>
-                <div class="chart">
-                    <img src="https://quickchart.io/chart?c={type:'line',data:{labels:['6d','5d','4d','3d','2d','1d','Now'],datasets:[{label:'${data.name} Price',backgroundColor:'rgba(255,255,255,0.05)',borderColor:'white',data:[10,12,11,13,15,14,${data.price}]}]}}" />
-                </div>
-            `;
-        }
-
-        async function getTop10() {
-            const res = await fetch('/top10');
-            const coins = await res.json();
-            const top = document.getElementById('top10');
-            top.innerHTML = "";
-
-            coins.forEach(c => {
-                top.innerHTML += `
-                    <div class="coin-card">
-                        <img src="${c.image}"/> <strong>${c.name}</strong><br>
-                        $${c.price} (${c.change_24h.toFixed(2)}%)
-                    </div>
-                `;
-            });
-        }
-
-        window.onload = loadCoins;
-    </script>
+    {% endfor %}
 </body>
 </html>

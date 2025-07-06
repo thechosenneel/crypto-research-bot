@@ -8,12 +8,13 @@ COINGECKO_API_KEY = os.getenv("COINGECKO_API")
 def fetch_filtered_coins():
     url = 'https://api.coingecko.com/api/v3/coins/markets'
     params = {
-        'vs_currency': 'usd',
-        'order': 'market_cap_asc',
-        'per_page': 50,
-        'page': 1,
-        'price_change_percentage': '24h,7d'
-    }
+    'vs_currency': 'usd',
+    'order': 'market_cap_asc',
+    'per_page': 7,
+    'page': 1,
+    'price_change_percentage': '24h,7d'
+}
+
 
     headers = {
         'x-cg-pro-api-key': COINGECKO_API_KEY

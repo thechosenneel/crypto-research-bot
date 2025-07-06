@@ -1,11 +1,16 @@
 from flask import Flask, render_template
 import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-COINGECKO_API = 'https://api.coingecko.com/api/v3/coins/markets'
+COINGECKO_API_KEY = os.getenv("COINGECKO_API")
 
 def fetch_filtered_coins():
+    url = 'https://api.coingecko.com/api/v3/coins/markets'
     params = {
         'vs_currency': 'usd',
         'order': 'market_cap_asc',
@@ -14,8 +19,12 @@ def fetch_filtered_coins():
         'price_change_percentage': '24h,7d'
     }
 
+    headers = {
+        'x-cg-pro-api-key': COINGECKO_API_KEY
+    }
+
     try:
-        response = requests.get(COINGECKO_API, params=params)
+        response = requests.get(url, params=params, headers=headers)
         response.raise_for_status()
         data = response.json()
     except Exception as e:
@@ -33,7 +42,6 @@ def fetch_filtered_coins():
             change_7d = coin.get('price_change_percentage_7d_in_currency', 0)
             max_supply = coin.get('max_supply')
 
-            # Updated relaxed conditions
             if (
                 market_cap < 150_000_000 and
                 volume > 500_000 and

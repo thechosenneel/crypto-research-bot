@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, jsonify
 import requests
+import os
+API_KEY = os.getenv("COINGECKO_API_KEY")
 
 app = Flask(__name__)
 
-API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
 BASE_URL = "https://api.coingecko.com/api/v3/simple/price"
 
 @app.route('/')

@@ -1,27 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Crypto Price Bot</title>
+    <title>Crypto Bot</title>
 </head>
 <body>
-    <h1>Check Crypto Price</h1>
-    <input type="text" id="coinInput" placeholder="Enter coin (e.g. bitcoin)">
-    <button onclick="getPrice()">Get Price</button>
-    <p id="result"></p>
+    <h2>Get Coin Info</h2>
+    <input type="text" id="coinInput" placeholder="e.g. bitcoin">
+    <button onclick="getCoinInfo()">Fetch Info</button>
+
+    <div id="output" style="margin-top: 20px;"></div>
 
     <script>
-        async function getPrice() {
+        async function getCoinInfo() {
             const coin = document.getElementById('coinInput').value.toLowerCase();
-            const response = await fetch('/get_price', {
+            const output = document.getElementById('output');
+            output.innerHTML = "Loading...";
+
+            const response = await fetch('/coin_info', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ coin: coin })
             });
+
             const data = await response.json();
-            document.getElementById('result').innerText =
-                data.price ? `Price: $${data.price}` : 'Error fetching price';
+
+            if (data.error) {
+                output.innerHTML = "Coin not found!";
+                return;
+            }
+
+            output.innerHTML = `
+                <img src="${data.image}" alt="${data.name}" />
+                <h3>${data.name}</h3>
+                <p><strong>Price:</strong> $${data.price}</p>
+                <p><strong>Market Cap:</strong> $${data.market_cap.toLocaleString()}</p>
+                <p><strong>24h Volume:</strong> $${data.volume.toLocaleString()}</p>
+                <p><strong>24h Change:</strong> ${data.change_24h.toFixed(2)}%</p>
+            `;
         }
     </script>
 </body>
 </html>
-

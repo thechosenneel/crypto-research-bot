@@ -109,7 +109,7 @@
                     div.classList.add('suggestion');
                     div.innerHTML = `<img src="${coin.thumb}" width="20"> ${coin.name} (${coin.symbol.toUpperCase()})`;
                     div.onclick = () => {
-                        window.location.href = `/coin/${coin.id}`;
+                        alert(`Navigate to details page: /coin/${coin.id}`); // or link it to coin page if you build one
                     };
                     suggestions.appendChild(div);
                 });

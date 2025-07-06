@@ -5,14 +5,15 @@ app = Flask(__name__)
 
 COINGECKO_API = 'https://api.coingecko.com/api/v3/coins/markets'
 
-def fetch_filtered_coins():
-    params = {
-        'vs_currency': 'usd',
-        'order': 'market_cap_asc',
-        'per_page': 250,
-        'page': 1,
-        'price_change_percentage': '24h,7d'
-    }
+if (
+    market_cap < 150_000_000 and
+    volume > 500_000 and
+    1 < change_24h < 80 and
+    change_7d > 0 and
+    price < 2 and
+    max_supply is not None
+):
+
 
     try:
         response = requests.get(COINGECKO_API, params=params)

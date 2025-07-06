@@ -1,12 +1,8 @@
 from flask import Flask, render_template
 import requests
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 app = Flask(__name__)
-
 COINGECKO_API_KEY = os.getenv("COINGECKO_API")
 
 def fetch_filtered_coins():

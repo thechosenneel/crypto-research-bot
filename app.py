@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template
 import requests
 
 app = Flask(__name__)
@@ -14,45 +14,52 @@ def fetch_filtered_coins():
         'price_change_percentage': '24h,7d'
     }
 
-    response = requests.get(COINGECKO_API, params=params)
-    data = response.json()
+    try:
+        response = requests.get(COINGECKO_API, params=params)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        print(f"Error fetching CoinGecko data: {e}")
+        return []
 
     filtered = []
 
     for coin in data:
         try:
-            market_cap = coin['market_cap'] or 0
-            volume = coin['total_volume'] or 0
-            price = coin['current_price'] or 0
-            change_24h = coin['price_change_percentage_24h'] or 0
-            change_7d = coin.get('price_change_percentage_7d_in_currency', 0)
-            max_supply = coin['max_supply']
+            # Extract safely with fallback values
+            market_cap = coin.get('market_cap') or 0
+            volume = coin.get('total_volume') or 0
+            price = coin.get('current_price') or 0
+            change_24h = coin.get('price_change_percentage_24h') or 0
+            change_7d = coin.get('price_change_percentage_7d_in_currency') or 0
+            max_supply = coin.get('max_supply')
 
+            # Apply core filter conditions
             if (
-                market_cap < 50000000 and
-                volume > 1000000 and
+                market_cap < 50_000_000 and
+                volume > 1_000_000 and
                 2 < change_24h < 50 and
                 change_7d > 0 and
                 price < 2 and
                 max_supply is not None
             ):
                 filtered.append({
-                    'name': coin['name'],
-                    'symbol': coin['symbol'],
-                    'price': price,
-                    'market_cap': market_cap,
-                    'volume': volume,
-                    'change_24h': change_24h,
-                    'change_7d': change_7d,
-                    'image': coin['image']
+                    'name': coin.get('name'),
+                    'symbol': coin.get('symbol'),
+                    'price': round(price, 4),
+                    'market_cap': round(market_cap),
+                    'volume': round(volume),
+                    'change_24h': round(change_24h, 2),
+                    'change_7d': round(change_7d, 2),
+                    'image': coin.get('image'),
                 })
 
         except Exception as e:
-            print(f"Error processing coin: {coin.get('id')} → {e}")
+            print(f"Error processing coin {coin.get('id')}: {e}")
 
     return filtered
 
-@app.route('/', methods=['GET'])
+@app.route('/')
 def index():
     coins = fetch_filtered_coins()
     return render_template('index.html', coins=coins)

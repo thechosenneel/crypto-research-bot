@@ -2,18 +2,115 @@
 <html>
 <head>
     <title>Crypto Bot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background-color: #f2f2f2;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            border: 1px solid #aaa;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #suggestions {
+            margin-top: 5px;
+            text-align: left;
+            width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            max-height: 150px;
+            overflow-y: auto;
+            border-radius: 0 0 5px 5px;
+        }
+
+        #suggestions div {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        #suggestions div:hover {
+            background-color: #eee;
+        }
+
+        #output {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
-    <h2>Get Coin Info</h2>
-    <input type="text" id="coinInput" placeholder="e.g. bitcoin">
+    <h2>Crypto Coin Lookup</h2>
+    <input type="text" id="coinInput" placeholder="Start typing a coin..." oninput="suggestCoins()" autocomplete="off">
     <button onclick="getCoinInfo()">Fetch Info</button>
-
-    <div id="output" style="margin-top: 20px;"></div>
+    <div id="suggestions"></div>
+    <div id="output"></div>
 
     <script>
+        let coinList = [];
+
+        async function loadCoins() {
+            const res = await fetch("https://api.coingecko.com/api/v3/coins/list");
+            coinList = await res.json();
+        }
+
+        function suggestCoins() {
+            const input = document.getElementById("coinInput").value.toLowerCase();
+            const suggestions = document.getElementById("suggestions");
+            suggestions.innerHTML = "";
+
+            if (input.length < 2) return;
+
+            const matches = coinList
+                .filter(c => c.id.startsWith(input))
+                .slice(0, 10);
+
+            matches.forEach(c => {
+                const div = document.createElement("div");
+                div.textContent = c.id;
+                div.onclick = () => {
+                    document.getElementById("coinInput").value = c.id;
+                    suggestions.innerHTML = "";
+                };
+                suggestions.appendChild(div);
+            });
+        }
+
         async function getCoinInfo() {
             const coin = document.getElementById('coinInput').value.toLowerCase();
             const output = document.getElementById('output');
+            document.getElementById('suggestions').innerHTML = "";
             output.innerHTML = "Loading...";
 
             const response = await fetch('/coin_info', {
@@ -25,7 +122,7 @@
             const data = await response.json();
 
             if (data.error) {
-                output.innerHTML = "Coin not found!";
+                output.innerHTML = "<p>Coin not found!</p>";
                 return;
             }
 
@@ -38,6 +135,9 @@
                 <p><strong>24h Change:</strong> ${data.change_24h.toFixed(2)}%</p>
             `;
         }
+
+        // Preload coin list on page load
+        window.onload = loadCoins;
     </script>
 </body>
 </html>

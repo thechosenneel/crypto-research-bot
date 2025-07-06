@@ -10,7 +10,7 @@ def fetch_filtered_coins():
     params = {
         'vs_currency': 'usd',
         'order': 'market_cap_asc',
-        'per_page': 250,
+        'per_page': 50,
         'page': 1,
         'price_change_percentage': '24h,7d'
     }

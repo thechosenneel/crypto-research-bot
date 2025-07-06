@@ -4,14 +4,33 @@
     <title>Crypto Bot</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            padding: 40px;
+            font-family: 'Segoe UI', sans-serif;
             background-color: #f2f2f2;
-            text-align: center;
+            margin: 0;
+            padding: 0;
         }
 
-        h2 {
-            color: #333;
+        .container {
+            display: flex;
+            flex-direction: row;
+            min-height: 100vh;
+        }
+
+        .left-panel {
+            flex: 3;
+            padding: 40px;
+        }
+
+        .right-panel {
+            flex: 1;
+            background-color: #1e1e1e;
+            color: #fff;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        h2, h3 {
+            margin-top: 0;
         }
 
         input, button {
@@ -20,19 +39,47 @@
             margin: 5px;
         }
 
-        #output, #top10 {
+        #suggestions {
+            background: white;
+            border: 1px solid #ccc;
+            width: 300px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        #suggestions div {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        #suggestions div:hover {
+            background-color: #eee;
+        }
+
+        #output {
             margin-top: 30px;
             background: white;
             padding: 20px;
             border-radius: 10px;
-            display: inline-block;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
+        .chart {
+            margin-top: 20px;
+            background-color: #2d2d2d;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .chart img {
+            border-radius: 10px;
+            width: 100%;
+        }
+
         .coin-card {
-            border-bottom: 1px solid #eee;
-            padding: 10px 0;
-            text-align: left;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
         }
 
         .coin-card img {
@@ -41,31 +88,38 @@
             margin-right: 8px;
         }
 
-        .chart {
-            margin-top: 10px;
+        .coin-card strong {
+            font-size: 16px;
         }
 
-        #suggestions div {
-            padding: 8px;
-            cursor: pointer;
-            background: white;
-        }
+        @media screen and (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
 
-        #suggestions div:hover {
-            background: #eee;
+            .left-panel, .right-panel {
+                flex: 1;
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <h2>Crypto Bot</h2>
+    <div class="container">
+        <div class="left-panel">
+            <h2>Crypto Bot</h2>
+            <input type="text" id="coinInput" placeholder="Search coin..." oninput="suggestCoins()">
+            <button onclick="getCoinInfo()">Fetch Info</button>
+            <div id="suggestions"></div>
 
-    <input type="text" id="coinInput" placeholder="Search coin..." oninput="suggestCoins()">
-    <button onclick="getCoinInfo()">Fetch Info</button>
-    <button onclick="getTop10()">Top 10 Coins</button>
-    <div id="suggestions"></div>
+            <div id="output"></div>
+        </div>
 
-    <div id="output"></div>
-    <div id="top10"></div>
+        <div class="right-panel">
+            <h3>Top 10 Coins</h3>
+            <div id="top10"></div>
+        </div>
+    </div>
 
     <script>
         let coinList = [];
@@ -73,6 +127,7 @@
         async function loadCoins() {
             const res = await fetch("https://api.coingecko.com/api/v3/coins/list");
             coinList = await res.json();
+            getTop10(); // Load top coins on page load
         }
 
         function suggestCoins() {
@@ -124,7 +179,7 @@
                 <p><strong>24h Volume:</strong> $${data.volume.toLocaleString()}</p>
                 <p><strong>24h Change:</strong> ${data.change_24h.toFixed(2)}%</p>
                 <div class="chart">
-                    <img src="https://quickchart.io/chart?c={type:'line',data:{labels:['6d','5d','4d','3d','2d','1d','Now'],datasets:[{label:'${data.name} Price',data:[10,12,11,13,15,14,${data.price}]}]}}" width="100%">
+                    <img src="https://quickchart.io/chart?c={type:'line',data:{labels:['6d','5d','4d','3d','2d','1d','Now'],datasets:[{label:'${data.name} Price',backgroundColor:'rgba(255,255,255,0.05)',borderColor:'white',data:[10,12,11,13,15,14,${data.price}]}]}}" />
                 </div>
             `;
         }
@@ -133,12 +188,13 @@
             const res = await fetch('/top10');
             const coins = await res.json();
             const top = document.getElementById('top10');
-            top.innerHTML = "<h3>Top 10 Coins</h3>";
+            top.innerHTML = "";
 
             coins.forEach(c => {
                 top.innerHTML += `
                     <div class="coin-card">
-                        <img src="${c.image}"/> <strong>${c.name}</strong> - $${c.price} (${c.change_24h.toFixed(2)}%)
+                        <img src="${c.image}"/> <strong>${c.name}</strong><br>
+                        $${c.price} (${c.change_24h.toFixed(2)}%)
                     </div>
                 `;
             });

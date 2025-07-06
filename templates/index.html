@@ -1,62 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Smart Crypto Finder Bot</title>
-    <style>
-        body {
-            background-color: #121212;
-            color: #eee;
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-        h1 {
-            color: #00ffc3;
-        }
-        .coin {
-            background: #1e1e1e;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            box-shadow: 0 0 12px rgba(0,255,200,0.1);
-        }
-        .coin img {
-            width: 40px;
-            height: 40px;
-            margin-right: 15px;
-        }
-        .coin-info {
-            display: flex;
-            flex-direction: column;
-        }
-        .coin-info span {
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-    </style>
+    <title>{{ coin.name }} | Crypto Details</title>
 </head>
 <body>
-    <h1>🧠 Smart Coin Sniffer</h1>
-    <p>Filtering promising coins based on price, volume, and market health.</p>
-
-    {% if coins %}
-        {% for coin in coins %}
-        <div class="coin">
-            <img src="{{ coin.image }}" alt="{{ coin.name }}">
-            <div class="coin-info">
-                <strong>{{ coin.name }} ({{ coin.symbol.upper() }})</strong>
-                <span>💰 Price: ${{ coin.price }}</span>
-                <span>📈 24h Change: {{ coin.change_24h }}%</span>
-                <span>📊 7d Change: {{ coin.change_7d }}%</span>
-                <span>🔁 Volume: ${{ "{:,}".format(coin.volume) }}</span>
-                <span>🏦 Market Cap: ${{ "{:,}".format(coin.market_cap) }}</span>
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <p>No coins matched the conditions at this time.</p>
-    {% endif %}
+    <h1>{{ coin.name }} ({{ coin.symbol.upper() }})</h1>
+    <img src="{{ coin.image.large }}" width="50"><br>
+    Market Cap Rank: {{ coin.market_cap_rank }}<br>
+    Current Price: ${{ coin.market_data.current_price.usd }}<br>
+    Description: {{ coin.description.en[:300] }}...
 </body>
 </html>

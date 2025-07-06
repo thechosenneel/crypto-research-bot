@@ -1,1 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crypto Price Bot</title>
+</head>
+<body>
+    <h1>Check Crypto Price</h1>
+    <input type="text" id="coinInput" placeholder="Enter coin (e.g. bitcoin)">
+    <button onclick="getPrice()">Get Price</button>
+    <p id="result"></p>
+
+    <script>
+        async function getPrice() {
+            const coin = document.getElementById('coinInput').value.toLowerCase();
+            const response = await fetch('/get_price', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ coin: coin })
+            });
+            const data = await response.json();
+            document.getElementById('result').innerText =
+                data.price ? `Price: $${data.price}` : 'Error fetching price';
+        }
+    </script>
+</body>
+</html>
 

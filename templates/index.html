@@ -1,26 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Smart Crypto Finder</title>
+    <meta charset="UTF-8">
+    <title>Smart Crypto Finder Bot</title>
     <style>
-        body { font-family: Arial; background: #111; color: #eee; }
-        .coin { border-bottom: 1px solid #333; padding: 10px; display: flex; align-items: center; }
-        img { width: 30px; height: 30px; margin-right: 10px; }
-        .info { margin-left: 10px; }
+        body {
+            background-color: #121212;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            color: #00ffc3;
+        }
+        .coin {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 0 12px rgba(0,255,200,0.1);
+        }
+        .coin img {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+        }
+        .coin-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .coin-info span {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 <body>
     <h1>🧠 Smart Coin Sniffer</h1>
-    <p>Showing coins with strong potential based on volume, price, momentum, and market cap.</p>
-    {% for coin in coins %}
-    <div class="coin">
-        <img src="{{ coin.image }}" alt="{{ coin.name }}">
-        <div class="info">
-            <strong>{{ coin.name }} ({{ coin.symbol.upper() }})</strong><br>
-            💰 Price: ${{ coin.price }} | 📈 24h: {{ coin.change_24h }}% | 7d: {{ coin.change_7d }}%<br>
-            🧩 Volume: ${{ coin.volume }} | MC: ${{ coin.market_cap }}
+    <p>Filtering promising coins based on price, volume, and market health.</p>
+
+    {% if coins %}
+        {% for coin in coins %}
+        <div class="coin">
+            <img src="{{ coin.image }}" alt="{{ coin.name }}">
+            <div class="coin-info">
+                <strong>{{ coin.name }} ({{ coin.symbol.upper() }})</strong>
+                <span>💰 Price: ${{ coin.price }}</span>
+                <span>📈 24h Change: {{ coin.change_24h }}%</span>
+                <span>📊 7d Change: {{ coin.change_7d }}%</span>
+                <span>🔁 Volume: ${{ "{:,}".format(coin.volume) }}</span>
+                <span>🏦 Market Cap: ${{ "{:,}".format(coin.market_cap) }}</span>
+            </div>
         </div>
-    </div>
-    {% endfor %}
+        {% endfor %}
+    {% else %}
+        <p>No coins matched the conditions at this time.</p>
+    {% endif %}
 </body>
 </html>

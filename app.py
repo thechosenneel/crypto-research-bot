@@ -1,3 +1,9 @@
+from flask import Flask, render_template
+import requests
+import os
+
+app = Flask(__name__)  # <- This is the 'app' that Gunicorn needs
+
 def fetch_filtered_coins():
     url = 'https://api.coingecko.com/api/v3/coins/markets'
     params = {
@@ -35,3 +41,11 @@ def fetch_filtered_coins():
         })
 
     return coins
+
+@app.route('/')
+def index():
+    coins = fetch_filtered_coins()
+    return render_template('index.html', coins=coins)
+
+if __name__ == '__main__':
+    app.run(debug=True)

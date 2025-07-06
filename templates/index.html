@@ -14,53 +14,13 @@
             color: #333;
         }
 
-        input[type="text"] {
+        input, button {
             padding: 10px;
-            width: 300px;
-            border: 1px solid #aaa;
-            border-radius: 5px;
             font-size: 16px;
+            margin: 5px;
         }
 
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            margin-left: 10px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        #suggestions {
-            margin-top: 5px;
-            text-align: left;
-            width: 300px;
-            margin-left: auto;
-            margin-right: auto;
-            background: white;
-            border: 1px solid #ccc;
-            border-top: none;
-            max-height: 150px;
-            overflow-y: auto;
-            border-radius: 0 0 5px 5px;
-        }
-
-        #suggestions div {
-            padding: 8px;
-            cursor: pointer;
-        }
-
-        #suggestions div:hover {
-            background-color: #eee;
-        }
-
-        #output {
+        #output, #top10 {
             margin-top: 30px;
             background: white;
             padding: 20px;
@@ -68,14 +28,44 @@
             display: inline-block;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+
+        .coin-card {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+            text-align: left;
+        }
+
+        .coin-card img {
+            width: 20px;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .chart {
+            margin-top: 10px;
+        }
+
+        #suggestions div {
+            padding: 8px;
+            cursor: pointer;
+            background: white;
+        }
+
+        #suggestions div:hover {
+            background: #eee;
+        }
     </style>
 </head>
 <body>
-    <h2>Crypto Coin Lookup</h2>
-    <input type="text" id="coinInput" placeholder="Start typing a coin..." oninput="suggestCoins()" autocomplete="off">
+    <h2>Crypto Bot</h2>
+
+    <input type="text" id="coinInput" placeholder="Search coin..." oninput="suggestCoins()">
     <button onclick="getCoinInfo()">Fetch Info</button>
+    <button onclick="getTop10()">Top 10 Coins</button>
     <div id="suggestions"></div>
+
     <div id="output"></div>
+    <div id="top10"></div>
 
     <script>
         let coinList = [];
@@ -133,10 +123,27 @@
                 <p><strong>Market Cap:</strong> $${data.market_cap.toLocaleString()}</p>
                 <p><strong>24h Volume:</strong> $${data.volume.toLocaleString()}</p>
                 <p><strong>24h Change:</strong> ${data.change_24h.toFixed(2)}%</p>
+                <div class="chart">
+                    <img src="https://quickchart.io/chart?c={type:'line',data:{labels:['6d','5d','4d','3d','2d','1d','Now'],datasets:[{label:'${data.name} Price',data:[10,12,11,13,15,14,${data.price}]}]}}" width="100%">
+                </div>
             `;
         }
 
-        // Preload coin list on page load
+        async function getTop10() {
+            const res = await fetch('/top10');
+            const coins = await res.json();
+            const top = document.getElementById('top10');
+            top.innerHTML = "<h3>Top 10 Coins</h3>";
+
+            coins.forEach(c => {
+                top.innerHTML += `
+                    <div class="coin-card">
+                        <img src="${c.image}"/> <strong>${c.name}</strong> - $${c.price} (${c.change_24h.toFixed(2)}%)
+                    </div>
+                `;
+            });
+        }
+
         window.onload = loadCoins;
     </script>
 </body>

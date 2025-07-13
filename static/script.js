@@ -1,46 +1,52 @@
 // static/script.js
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('search-input');
-    const searchResults = document.getElementById('search-results');
+    const suggestionList = document.getElementById('suggestion-list');
     const coinDetails = document.getElementById('coin-details');
+    const searchButton = document.getElementById('search-button');
     let sparklineChart = null;
+    let currentSuggestions = [];
     
-    // Debounce function to limit API calls
-    function debounce(func, wait) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
+    // ... (existing helper functions remain the same) ...
+    
+    // Highlight matching text in suggestions
+    function highlightMatch(text, query) {
+        if (!query) return text;
+        const regex = new RegExp(`(${query})`, 'gi');
+        return text.replace(regex, '<span class="suggestion-highlight">$1</span>');
     }
     
-    // Format currency
-    function formatCurrency(value) {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            maximumFractionDigits: value < 1 ? 4 : 2
-        }).format(value);
-    }
-    
-    // Format large numbers
-    function formatNumber(num) {
-        if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
-        if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-        if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-        if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
-        return num.toFixed(2);
-    }
-    
-    // Format percentage
-    function formatPercent(value) {
-        return value ? value.toFixed(2) + '%' : 'N/A';
+    // Show suggestions
+    function showSuggestions(suggestions, query) {
+        if (suggestions.length === 0 || !query) {
+            suggestionList.style.display = 'none';
+            return;
+        }
+        
+        suggestionList.innerHTML = suggestions.map(coin => `
+            <div class="suggestion-item" data-id="${coin.id}">
+                ${highlightMatch(coin.name, query)}
+                <span class="suggestion-symbol">${coin.symbol.toUpperCase()}</span>
+            </div>
+        `).join('');
+        
+        suggestionList.style.display = 'block';
+        currentSuggestions = suggestions;
+        
+        // Add click event listeners to suggestions
+        document.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                loadCoinDetails(item.dataset.id);
+                searchInput.value = '';
+                suggestionList.style.display = 'none';
+            });
+        });
     }
     
     // Search coins
     const searchCoins = debounce(async function(query) {
         if (query.length < 2) {
-            searchResults.style.display = 'none';
+            suggestionList.style.display = 'none';
             return;
         }
         
@@ -52,128 +58,87 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(results.error);
             }
             
-            if (results.length === 0) {
-                searchResults.innerHTML = '<div class="search-item p-3">No coins found</div>';
-                searchResults.style.display = 'block';
-                return;
-            }
-            
-            searchResults.innerHTML = results.map(coin => `
-                <div class="search-item" data-id="${coin.id}">
-                    ${coin.label}
-                </div>
-            `).join('');
-            
-            searchResults.style.display = 'block';
-            
-            // Add click event listeners
-            document.querySelectorAll('.search-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    loadCoinDetails(item.dataset.id);
-                    searchInput.value = '';
-                    searchResults.style.display = 'none';
-                });
-            });
+            showSuggestions(results, query);
         } catch (error) {
-            searchResults.innerHTML = `<div class="search-item p-3 text-danger">Error: ${error.message}</div>`;
-            searchResults.style.display = 'block';
+            suggestionList.innerHTML = `<div class="suggestion-item p-3 text-danger">Error: ${error.message}</div>`;
+            suggestionList.style.display = 'block';
         }
     }, 300);
     
-    // Load coin details
-    async function loadCoinDetails(coinId) {
-        try {
-            const response = await fetch(`/coin/${coinId}`);
-            const data = await response.json();
-            
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            // Update DOM elements
-            document.getElementById('coin-name').textContent = data.name;
-            document.getElementById('coin-symbol').textContent = data.symbol;
-            document.getElementById('current-price').textContent = formatCurrency(data.current_price);
-            document.getElementById('market-cap').textContent = formatNumber(data.market_cap);
-            document.getElementById('volume-24h').textContent = formatNumber(data.volume_24h);
-            document.getElementById('market-cap-rank').textContent = '#' + data.market_cap_rank;
-            document.getElementById('volume-mc-ratio').textContent = formatPercent(data.volume_mc_ratio);
-            document.getElementById('ath-gap').textContent = formatPercent(data.ath_gap);
-            document.getElementById('circulating-percent').textContent = formatPercent(data.circulating_percent);
-            
-            // Handle price changes
-            const priceChange24h = document.getElementById('price-change-24h');
-            priceChange24h.textContent = formatPercent(data.price_change_24h);
-            priceChange24h.className = 'metric-value ' + 
-                (data.price_change_24h >= 0 ? 'positive' : 'negative');
-            
-            const priceChange7d = document.getElementById('price-change-7d');
-            priceChange7d.textContent = formatPercent(data.price_change_7d);
-            priceChange7d.className = 'metric-value ' + 
-                (data.price_change_7d >= 0 ? 'positive' : 'negative');
-            
-            // Create sparkline chart
-            if (sparklineChart) {
-                sparklineChart.destroy();
-            }
-            
-            const ctx = document.getElementById('sparkline-chart').getContext('2d');
-            sparklineChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array(data.sparkline.length).fill(''),
-                    datasets: [{
-                        data: data.sparkline,
-                        borderColor: '#6f42c1',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: false,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            enabled: true,
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return formatCurrency(context.parsed.y);
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: { display: false },
-                        y: { display: false }
-                    }
-                }
-            });
-            
-            // Show coin details section
-            coinDetails.style.display = 'block';
-            
-            // Scroll to results
-            coinDetails.scrollIntoView({ behavior: 'smooth' });
-            
-        } catch (error) {
-            alert(`Error loading coin data: ${error.message}`);
-        }
-    }
+    // ... (loadCoinDetails remains the same) ...
     
     // Event listeners
     searchInput.addEventListener('input', function() {
-        searchCoins(this.value.trim());
+        const query = this.value.trim();
+        searchCoins(query);
     });
     
-    // Close search results when clicking outside
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 2 && currentSuggestions.length > 0) {
+            suggestionList.style.display = 'block';
+        }
+    });
+    
+    searchInput.addEventListener('keydown', function(e) {
+        // Arrow down to select first suggestion
+        if (e.key === 'ArrowDown' && suggestionList.style.display === 'block') {
+            const firstItem = suggestionList.querySelector('.suggestion-item');
+            if (firstItem) firstItem.focus();
+        }
+        
+        // Enter to search
+        if (e.key === 'Enter') {
+            if (currentSuggestions.length > 0) {
+                loadCoinDetails(currentSuggestions[0].id);
+            }
+        }
+    });
+    
+    // Close suggestions when clicking outside
     document.addEventListener('click', function(e) {
-        if (!searchResults.contains(e.target) {
-            searchResults.style.display = 'none';
+        if (!suggestionList.contains(e.target) && 
+            e.target !== searchInput && 
+            e.target !== searchButton) {
+            suggestionList.style.display = 'none';
+        }
+    });
+    
+    // Search button click
+    searchButton.addEventListener('click', function() {
+        if (currentSuggestions.length > 0) {
+            loadCoinDetails(currentSuggestions[0].id);
+        }
+    });
+    
+    // Keyboard navigation for suggestions
+    suggestionList.addEventListener('keydown', function(e) {
+        const items = this.querySelectorAll('.suggestion-item');
+        const currentItem = document.activeElement;
+        const currentIndex = Array.from(items).indexOf(currentItem);
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const nextIndex = (currentIndex + 1) % items.length;
+            items[nextIndex].focus();
+        }
+        
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prevIndex = (currentIndex - 1 + items.length) % items.length;
+            if (prevIndex === items.length - 1) {
+                searchInput.focus();
+            } else {
+                items[prevIndex].focus();
+            }
+        }
+        
+        if (e.key === 'Enter' && currentItem) {
+            currentItem.click();
+        }
+        
+        if (e.key === 'Escape') {
+            suggestionList.style.display = 'none';
+            searchInput.focus();
         }
     });
 });

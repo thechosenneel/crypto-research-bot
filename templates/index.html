@@ -25,63 +25,59 @@
 </head>
 <body>
 <div class="container py-4">
-    <h2 class="mb-4 text-center">🚀 Crypto Research Bot</h2>
+    <h2 class="mb-4 text-center">🔍 Search Any Coin</h2>
+
+    <form method="POST" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="coin_name" class="form-control" placeholder="Enter coin name (e.g. pepe, shiba, solana)" required>
+            <button class="btn btn-primary" type="submit">Search</button>
+        </div>
+    </form>
 
     {% if error %}
-        <div class="alert alert-danger">API Error: {{ error }}</div>
+        <div class="alert alert-danger">{{ error }}</div>
     {% endif %}
 
-    {% if coins|length == 0 %}
-        <p class="text-center">No coins currently fit the criteria.</p>
-    {% endif %}
-
-    <div class="row g-4">
-        {% for coin in coins %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card p-3 coin-card">
-                <div class="d-flex align-items-center">
-                    <img src="{{ coin.image }}" alt="{{ coin.symbol }}" width="40" class="me-3">
-                    <h5 class="mb-0">{{ coin.name }} ({{ coin.symbol.upper() }})</h5>
-                </div>
-                <hr>
-                <p><strong>Price:</strong> ${{ coin.price }}</p>
-                <p><strong>24h:</strong> <span class="badge {{ 'badge-positive' if coin.change_24h > 0 else 'badge-negative' }}">{{ coin.change_24h }}%</span></p>
-                <p><strong>7d:</strong> <span class="badge {{ 'badge-positive' if coin.change_7d > 0 else 'badge-negative' }}">{{ coin.change_7d }}%</span></p>
-                <p><strong>Market Cap:</strong> ${{ '{:,.0f}'.format(coin.market_cap) }}</p>
-                <p><strong>Volume:</strong> ${{ '{:,.0f}'.format(coin.volume) }}</p>
-                <p><strong>Rank:</strong> {{ coin.rank }}</p>
-                <p><strong>Volume/Cap:</strong> {{ coin.volume_to_cap }}</p>
-                <p><strong>ATH Gap:</strong> {{ coin.ath_gap_percent }}%</p>
-                <p><strong>Circulating %:</strong> {{ coin.circ_supply_percent }}%</p>
-
-                <canvas id="chart-{{ loop.index }}" height="100"></canvas>
-                <script>
-                    const ctx{{ loop.index }} = document.getElementById('chart-{{ loop.index }}').getContext('2d');
-                    new Chart(ctx{{ loop.index }}, {
-                        type: 'line',
-                        data: {
-                            labels: [...Array({{ coin.sparkline|length }}).keys()],
-                            datasets: [{
-                                label: '7d Trend',
-                                data: {{ coin.sparkline }},
-                                borderColor: '#0d6efd',
-                                fill: false,
-                                tension: 0.3
-                            }]
-                        },
-                        options: {
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                x: { display: false },
-                                y: { display: false }
-                            }
-                        }
-                    });
-                </script>
-            </div>
+    {% if coin %}
+    <div class="card p-4 coin-card">
+        <div class="d-flex align-items-center">
+            <img src="{{ coin.image }}" alt="{{ coin.symbol }}" width="50" class="me-3">
+            <h4>{{ coin.name }} ({{ coin.symbol.upper() }})</h4>
         </div>
-        {% endfor %}
+        <hr>
+        <p><strong>Price:</strong> ${{ coin.price }}</p>
+        <p><strong>24h:</strong> <span class="badge {{ 'badge-positive' if coin.change_24h > 0 else 'badge-negative' }}">{{ coin.change_24h }}%</span></p>
+        <p><strong>7d:</strong> <span class="badge {{ 'badge-positive' if coin.change_7d > 0 else 'badge-negative' }}">{{ coin.change_7d }}%</span></p>
+        <p><strong>Market Cap:</strong> ${{ '{:,.0f}'.format(coin.market_cap) }}</p>
+        <p><strong>Volume:</strong> ${{ '{:,.0f}'.format(coin.volume) }}</p>
+        <p><strong>ATH:</strong> ${{ coin.ath }} ({{ coin.ath_change }}% down)</p>
+
+        <canvas id="chart-1" height="100"></canvas>
+        <script>
+            const ctx1 = document.getElementById('chart-1').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: [...Array({{ coin.sparkline|length }}).keys()],
+                    datasets: [{
+                        label: '7d Trend',
+                        data: {{ coin.sparkline }},
+                        borderColor: '#0d6efd',
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+        </script>
     </div>
+    {% endif %}
 </div>
 </body>
 </html>

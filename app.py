@@ -14,6 +14,7 @@ COIN_DETAILS_URL = "https://api.coingecko.com/api/v3/coins/{}?localization=false
 def index():
     return render_template('index.html')
 
+# app.py (updated search_coins route)
 @app.route('/search')
 def search_coins():
     query = request.args.get('query', '')
@@ -25,12 +26,11 @@ def search_coins():
         response.raise_for_status()
         coins = response.json().get('coins', [])
         
-        # Format results for autocomplete
+        # Format results for suggestions
         results = [{
             'id': coin['id'],
             'name': coin['name'],
-            'symbol': coin['symbol'],
-            'label': f"{coin['name']} ({coin['symbol'].upper()})"
+            'symbol': coin['symbol']
         } for coin in coins[:7]]  # Limit to 7 results
         
         return jsonify(results)

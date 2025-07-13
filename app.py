@@ -4,7 +4,7 @@ import requests
 import os
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -67,20 +67,20 @@ def get_coin_details(coin_id):
             return jsonify({'error': 'Market data not available for this coin'}), 400
         
         # Extract required data
-        current_price = market_data.get('current_price', {}).get('usd')
-        price_change_24h = market_data.get('price_change_percentage_24h_in_currency', {}).get('usd')
-        price_change_7d = market_data.get('price_change_percentage_7d_in_currency', {}).get('usd')
-        market_cap = market_data.get('market_cap', {}).get('usd')
-        volume_24h = market_data.get('total_volume', {}).get('usd')
-        market_cap_rank = data.get('market_cap_rank')
-        ath = market_data.get('ath', {}).get('usd')
+        current_price = market_data.get('current_price', {}).get('usd', 0)
+        price_change_24h = market_data.get('price_change_percentage_24h_in_currency', {}).get('usd', 0)
+        price_change_7d = market_data.get('price_change_percentage_7d_in_currency', {}).get('usd', 0)
+        market_cap = market_data.get('market_cap', {}).get('usd', 0)
+        volume_24h = market_data.get('total_volume', {}).get('usd', 0)
+        market_cap_rank = data.get('market_cap_rank', 0)
+        ath = market_data.get('ath', {}).get('usd', 0)
         
         # Calculate additional metrics
         volume_mc_ratio = (volume_24h / market_cap * 100) if market_cap and market_cap > 0 else 0
-        ath_gap = ((ath - current_price) / ath * 100) if ath and ath > 0 else 0
+        ath_gap = ((ath - current_price) / ath * 100) if ath and ath > 0 and current_price > 0 else 0
         
-        circulating_supply = market_data.get('circulating_supply')
-        total_supply = market_data.get('total_supply')
+        circulating_supply = market_data.get('circulating_supply', 0)
+        total_supply = market_data.get('total_supply', 0)
         circulating_percent = (circulating_supply / total_supply * 100) if total_supply and total_supply > 0 else 100
         
         sparkline = market_data.get('sparkline_7d', {}).get('price', [])

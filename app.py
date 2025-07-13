@@ -1,65 +1,82 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template
 import requests
-import os
 
 app = Flask(__name__)
 
-API_KEY = os.getenv("COINGECKO_API_KEY")
+API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
 
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-@app.route('/coin_info', methods=['POST'])
-def coin_info():
-    coin = request.json.get("coin", "bitcoin").lower()
-    url = f"https://api.coingecko.com/api/v3/coins/{coin}"
-    params = {
-        "x_cg_demo_api_key": API_KEY,
-        "localization": "false",
-        "tickers": "false",
-        "market_data": "true",
-        "community_data": "false",
-        "developer_data": "false",
-        "sparkline": "false"
-    }
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        info = {
-            "name": data.get("name"),
-            "image": data.get("image", {}).get("thumb"),
-            "price": data.get("market_data", {}).get("current_price", {}).get("usd"),
-            "market_cap": data.get("market_data", {}).get("market_cap", {}).get("usd"),
-            "volume": data.get("market_data", {}).get("total_volume", {}).get("usd"),
-            "change_24h": data.get("market_data", {}).get("price_change_percentage_24h"),
-            "chart_url": f"https://www.coingecko.com/coins/{coin}/sparkline"
-        }
-        return jsonify(info)
-    return jsonify({"error": "Coin not found"}), 404
-
-@app.route('/top10')
-def top10():
+def fetch_filtered_coins():
     url = "https://api.coingecko.com/api/v3/coins/markets"
+    headers = {
+        "x-cg-demo-api-key": API_KEY
+    }
     params = {
         "vs_currency": "usd",
-        "order": "market_cap_desc",
-        "per_page": 10,
+        "order": "market_cap_asc",
+        "per_page": 100,
         "page": 1,
-        "sparkline": False,
-        "x_cg_demo_api_key": API_KEY
+        "sparkline": "true",
+        "price_change_percentage": "24h,7d"
     }
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        coins = response.json()
-        top_coins = [{
-            "name": coin["name"],
-            "price": coin["current_price"],
-            "change_24h": coin["price_change_percentage_24h"],
-            "image": coin["image"]
-        } for coin in coins]
-        return jsonify(top_coins)
-    return jsonify({"error": "Failed to fetch top coins"}), 400
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    response = requests.get(url, params=params, headers=headers)
+    data = response.json()
+    result = []
+
+    for coin in data:
+        try:
+            vol = coin['total_volume']
+            cap = coin['market_cap']
+            price = coin['current_price']
+            ath = coin['ath']
+            circ = coin.get('circulating_supply', 0)
+            total = coin.get('total_supply', 1)
+            rank = coin.get('market_cap_rank', 9999)
+
+            if cap == 0 or total == 0 or ath == 0:
+                continue
+
+            vol_to_cap = vol / cap
+            ath_gap = ((ath - price) / ath) * 100
+            circ_percent = (circ / total) * 100
+
+            if (
+                price < 1 and
+                vol > 1_000_000 and
+                vol_to_cap > 1 and
+                circ_percent > 50 and
+                ath_gap > 40 and
+                rank < 300
+            ):
+                result.append({
+                    "name": coin['name'],
+                    "symbol": coin['symbol'],
+                    "image": coin['image'],
+                    "price": price,
+                    "volume": vol,
+                    "market_cap": cap,
+                    "rank": rank,
+                    "volume_to_cap": round(vol_to_cap, 2),
+                    "ath_gap_percent": round(ath_gap, 2),
+                    "circ_supply_percent": round(circ_percent, 2),
+                    "change_24h": coin.get("price_change_percentage_24h_in_currency"),
+                    "change_7d": coin.get("price_change_percentage_7d_in_currency"),
+                    "sparkline": coin.get("sparkline_in_7d", {}).get("price", [])
+                })
+        except:
+            continue
+
+    return result
+
+@app.route("/")
+def index():
+    try:
+        coins = fetch_filtered_coins()
+        return render_template("index.html", coins=coins)
+    except Exception as e:
+        return render_template("index.html", coins=[], error=str(e))
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)

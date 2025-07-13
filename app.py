@@ -1,63 +1,78 @@
-# app.py
-from flask import Flask, render_template, request, jsonify
-import requests
 import os
+import requests
+from flask import Flask, render_template, request, jsonify
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-API_KEY = os.getenv("COINGECKO_API_KEY") or "CG-oUpG62o22KvJGpmC99XE5tRz"
-
+COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY")
 HEADERS = {
     "accept": "application/json",
-    "x-cg-pro-api-key": API_KEY
+    "x-cg-pro-api-key": COINGECKO_API_KEY
 }
 
-BASE_URL = "https://api.coingecko.com/api/v3"
 
-@app.route('/')
-def home():
-    return render_template("index.html")
+@app.route("/")
+def index():
+    return render_template("index.html", coin=None)
 
-@app.route('/search')
+
+@app.route("/search")
 def search():
-    query = request.args.get('q', '')
-    if not query:
-        return jsonify([])
-    res = requests.get(f"{BASE_URL}/search?query={query}", headers=HEADERS)
-    if res.status_code != 200:
-        return jsonify([])
-    data = res.json().get("coins", [])
-    results = [{"id": c['id'], "name": c['name'], "symbol": c['symbol']} for c in data]
-    return jsonify(results)
+    query = request.args.get("q", "").lower()
+    url = "https://api.coingecko.com/api/v3/search"
+    response = requests.get(url, headers=HEADERS, params={"query": query})
 
-@app.route('/coin/<coin_id>')
-def coin_detail(coin_id):
+    if response.status_code != 200:
+        return jsonify([])
+
+    results = response.json().get("coins", [])
+    suggestions = [{"id": coin["id"], "name": coin["name"], "symbol": coin["symbol"]} for coin in results]
+    return jsonify(suggestions)
+
+
+@app.route("/coin/<coin_id>")
+def coin_details(coin_id):
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+    params = {
+        "localization": "false",
+        "sparkline": "true"
+    }
+    response = requests.get(url, headers=HEADERS, params=params)
+
+    if response.status_code != 200:
+        return render_template("index.html", error="Failed to fetch coin details.", coin=None)
+
+    data = response.json()
+
     try:
-        detail = requests.get(f"{BASE_URL}/coins/{coin_id}?sparkline=true", headers=HEADERS).json()
-
-        market_data = detail['market_data']
-        supply = detail['market_data'].get("circulating_supply", 0)
-        max_supply = detail['market_data'].get("max_supply", 1)
+        market = data["market_data"]
+        supply = market["circulating_supply"]
+        max_supply = market.get("max_supply", supply or 1)
 
         coin = {
-            "name": detail['name'],
-            "symbol": detail['symbol'],
-            "image": detail['image']['large'],
-            "price": market_data['current_price']['usd'],
-            "change_24h": market_data['price_change_percentage_24h'],
-            "change_7d": market_data['price_change_percentage_7d'],
-            "market_cap": market_data['market_cap']['usd'],
-            "volume": market_data['total_volume']['usd'],
-            "rank": detail['market_cap_rank'],
-            "volume_to_cap": round(market_data['total_volume']['usd'] / market_data['market_cap']['usd'], 2) if market_data['market_cap']['usd'] else 0,
-            "ath_gap_percent": round(100 - (market_data['current_price']['usd'] / market_data['ath']['usd']) * 100, 2),
-            "circ_supply_percent": round((supply / max_supply) * 100, 2) if max_supply else 0,
-            "sparkline": market_data['sparkline_7d']['price']
+            "name": data["name"],
+            "symbol": data["symbol"],
+            "image": data["image"]["large"],
+            "price": market["current_price"]["usd"],
+            "change_24h": market["price_change_percentage_24h"],
+            "change_7d": market["price_change_percentage_7d"],
+            "market_cap": market["market_cap"]["usd"],
+            "volume": market["total_volume"]["usd"],
+            "rank": data["market_cap_rank"],
+            "volume_to_cap": round(market["total_volume"]["usd"] / market["market_cap"]["usd"], 3) if market["market_cap"]["usd"] else 0,
+            "ath_gap_percent": round(100 - ((market["current_price"]["usd"] / market["ath"]["usd"]) * 100), 2),
+            "circ_supply_percent": round((supply / max_supply) * 100, 2) if max_supply else 100,
+            "sparkline": market["sparkline_7d"]["price"]
         }
 
         return render_template("index.html", coin=coin)
-    except Exception as e:
-        return render_template("index.html", error=str(e))
 
-if __name__ == '__main__':
+    except KeyError as e:
+        return render_template("index.html", error=f"Missing data: {e}", coin=None)
+
+
+if __name__ == "__main__":
     app.run(debug=True)

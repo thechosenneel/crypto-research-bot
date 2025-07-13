@@ -10,8 +10,7 @@ app = Flask(__name__)
 
 COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY")
 HEADERS = {
-    "accept": "application/json",
-    "x-cg-pro-api-key": COINGECKO_API_KEY
+    "accept": "application/json"
 }
 
 

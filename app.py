@@ -1,80 +1,50 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import requests
 
 app = Flask(__name__)
 
 API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
 
-def fetch_filtered_coins():
-    url = "https://api.coingecko.com/api/v3/coins/markets"
-    headers = {
-        "x-cg-demo-api-key": API_KEY
-    }
-    params = {
-        "vs_currency": "usd",
-        "order": "market_cap_asc",
-        "per_page": 100,
-        "page": 1,
-        "sparkline": "true",
-        "price_change_percentage": "24h,7d"
-    }
+COINGECKO_SEARCH = "https://api.coingecko.com/api/v3/search"
+COINGECKO_COIN_DATA = "https://api.coingecko.com/api/v3/coins/{}"
 
-    response = requests.get(url, params=params, headers=headers)
-    data = response.json()
-    result = []
-
-    for coin in data:
-        try:
-            vol = coin['total_volume']
-            cap = coin['market_cap']
-            price = coin['current_price']
-            ath = coin['ath']
-            circ = coin.get('circulating_supply', 0)
-            total = coin.get('total_supply', 1)
-            rank = coin.get('market_cap_rank', 9999)
-
-            if cap == 0 or total == 0 or ath == 0:
-                continue
-
-            vol_to_cap = vol / cap
-            ath_gap = ((ath - price) / ath) * 100
-            circ_percent = (circ / total) * 100
-
-            if (
-                price < 1 and
-                vol > 1_000_000 and
-                vol_to_cap > 1 and
-                circ_percent > 50 and
-                ath_gap > 40 and
-                rank < 300
-            ):
-                result.append({
-                    "name": coin['name'],
-                    "symbol": coin['symbol'],
-                    "image": coin['image'],
-                    "price": price,
-                    "volume": vol,
-                    "market_cap": cap,
-                    "rank": rank,
-                    "volume_to_cap": round(vol_to_cap, 2),
-                    "ath_gap_percent": round(ath_gap, 2),
-                    "circ_supply_percent": round(circ_percent, 2),
-                    "change_24h": coin.get("price_change_percentage_24h_in_currency"),
-                    "change_7d": coin.get("price_change_percentage_7d_in_currency"),
-                    "sparkline": coin.get("sparkline_in_7d", {}).get("price", [])
-                })
-        except:
-            continue
-
-    return result
-
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def index():
-    try:
-        coins = fetch_filtered_coins()
-        return render_template("index.html", coins=coins)
-    except Exception as e:
-        return render_template("index.html", coins=[], error=str(e))
+    coin_data = None
+    error = None
+
+    if request.method == "POST":
+        search_query = request.form.get("coin_name", "").strip().lower()
+
+        try:
+            search_res = requests.get(COINGECKO_SEARCH, params={"query": search_query})
+            results = search_res.json().get("coins", [])
+
+            if not results:
+                error = "No coins found. Try a different name."
+            else:
+                coin_id = results[0]["id"]
+                data_res = requests.get(COINGECKO_COIN_DATA.format(coin_id), params={"sparkline": "true"})
+                raw = data_res.json()
+
+                market_data = raw.get("market_data", {})
+                coin_data = {
+                    "name": raw.get("name"),
+                    "symbol": raw.get("symbol"),
+                    "image": raw.get("image", {}).get("large"),
+                    "price": market_data.get("current_price", {}).get("usd"),
+                    "change_24h": market_data.get("price_change_percentage_24h"),
+                    "change_7d": market_data.get("price_change_percentage_7d"),
+                    "market_cap": market_data.get("market_cap", {}).get("usd"),
+                    "volume": market_data.get("total_volume", {}).get("usd"),
+                    "ath": market_data.get("ath", {}).get("usd"),
+                    "ath_change": market_data.get("ath_change_percentage", {}).get("usd"),
+                    "sparkline": market_data.get("sparkline_7d", {}).get("price", [])
+                }
+        except Exception as e:
+            error = str(e)
+
+    return render_template("index.html", coin=coin_data, error=error)
 
 if __name__ == "__main__":
     import os
